@@ -83,6 +83,8 @@ python analyze.py logs/ta_chaine_123456.jsonl --top 5     # créer les 5 meilleu
 python analyze.py logs/xxx.jsonl --local                 # télécharge seulement les passages (yt-dlp) → clips/*.mp4
 python analyze.py logs/xxx.jsonl --video mon_vod.mp4     # coupe dans un VOD déjà téléchargé (ffmpeg)
 ```
+**Analyse audio + anti-spam :** avec `--local` ou `--video`, le **volume audio** du stream est analysé aussi (cris, éclats de rire du streamer) : quand chat *et* audio montent ensemble, le score explose ; un moment fort silencieux côté chat est quand même repéré. `--audio` l'active aussi avec les clips Twitch (télécharge juste la piste audio). Pour éviter les faux positifs du début de live : les **4 premières minutes sont ignorées** (`HL_SKIP_START_SECONDS=240`), les commandes `!…` sont ignorées et chaque personne compte max 2 messages par fenêtre (`HL_MAX_MSGS_PER_USER`). `HL_AUDIO_WEIGHT` règle le poids de l'audio.
+
 Nécessite [ffmpeg](https://ffmpeg.org/download.html) installé (et `yt-dlp`, installé avec `pip install -r requirements.txt`). Pas besoin de télécharger tout le stream : seuls les ~30 s de chaque moment sont récupérés. Les MP4 sont dans `clips/`.
 
 - Il faut activer **« Stocker les diffusions passées »** (VOD) dans Twitch.

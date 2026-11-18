@@ -57,3 +57,19 @@ def test_log_roundtrip(tmp_path):
     log = chatlog.ChatLog(p, "123", 1e6); log.add({"t": 2.0, "k": "msg", "u": "a", "m": "b"}); log.add({"t": 1.0, "k": "msg", "u": "a", "m": "c"}); log.close()
     h, ev = chatlog.load_log(p)
     assert h["stream_id"] == "123" and [e["t"] for e in ev] == [1.0, 2.0]
+
+
+def test_opening_spam_ignored_and_audio_boosts():
+    t0, ev = fake_stream()
+    # gros spam d'ouverture (1 min après le début) : ignoré grâce à SKIP_START
+    rnd = random.Random(5)
+    ev += [{"t": t0 + 30 + rnd.random() * 10, "k": "msg", "u": f"s{i%40}", "m": "LUL KEKW"} for i in range(400)]
+    ev.sort(key=lambda e: e["t"])
+    ms = highlights.find_moments(ev, 10, stream_start=t0)
+    assert all(m.peak - t0 > highlights.SKIP_START for m in ms)
+    # le streamer crie à t=2300 sans réaction du chat : l'audio le trouve
+    audio = (t0, [-30.0 + (rnd.random() * 2) for _ in range(3600)])
+    for s in range(2300, 2310):
+        audio[1][s] = -8.0
+    ms = highlights.find_moments(ev, 10, audio=audio, stream_start=t0)
+    assert any(abs(m.peak - t0 - 2305) < 30 for m in ms), [m.peak - t0 for m in ms]

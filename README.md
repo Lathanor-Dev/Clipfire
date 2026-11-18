@@ -83,6 +83,8 @@ python analyze.py logs/your_channel_123456.jsonl --top 5     # clip the 5 best
 python analyze.py logs/xxx.jsonl --local                 # downloads only the needed parts (yt-dlp) → clips/*.mp4
 python analyze.py logs/xxx.jsonl --video my_vod.mp4      # cut from an already-downloaded VOD (ffmpeg)
 ```
+**Audio analysis + anti-spam:** with `--local` or `--video`, the stream's **audio volume** is analysed too (the streamer screaming or laughing): when chat *and* audio spike together the score soars, and a highlight that's quiet in chat is still found. `--audio` enables it with Twitch clips too (downloads only the audio track). To avoid opening-of-stream false positives, the **first 4 minutes are ignored** (`HL_SKIP_START_SECONDS=240`), `!commands` are ignored and each person counts at most 2 messages per window (`HL_MAX_MSGS_PER_USER`). `HL_AUDIO_WEIGHT` sets the audio's weight.
+
 Requires [ffmpeg](https://ffmpeg.org/download.html) (and `yt-dlp`, installed via `pip install -r requirements.txt`). No need to download the whole stream: only the ~30 s around each moment is fetched. MP4s land in `clips/`.
 
 - Enable **"Store past broadcasts"** (VODs) in Twitch.
