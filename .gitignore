@@ -1,0 +1,14 @@
+# Secrets : ne JAMAIS publier
+.env
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Éditeurs / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
