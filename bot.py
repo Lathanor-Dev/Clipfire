@@ -12,125 +12,23 @@ import random
 import ssl
 import time
 from collections import deque
+from datetime import datetime
 
-import requests
-from dotenv import load_dotenv
+import analyze
+import chatlog
+from twitch_api import CHANNEL, create_clip, get_broadcaster_id, get_stream, send_to_discord
 
-load_dotenv()
-
-# --- Configuration (voir .env) ------------------------------------------------
-CHANNEL = os.environ["TWITCH_CHANNEL"].lower().lstrip("#")
-CLIENT_ID = os.environ["TWITCH_CLIENT_ID"]
-CLIENT_SECRET = os.environ.get("TWITCH_CLIENT_SECRET", "")
-ACCESS_TOKEN = os.environ["TWITCH_ACCESS_TOKEN"]
-REFRESH_TOKEN = os.environ.get("TWITCH_REFRESH_TOKEN", "")
-DISCORD_WEBHOOK = os.environ["DISCORD_WEBHOOK_URL"]
+# Mode « live » : clip immédiat lors d'un pic. Mode « analyse » : on enregistre tout le chat
+# et, à la fin du live, on cherche les meilleurs moments pour les clipper depuis le VOD.
+LIVE_CLIPS = os.environ.get("LIVE_CLIPS", "1") != "0"
+AUTO_ANALYZE = os.environ.get("AUTO_ANALYZE", "1") != "0"
+LOG_DIR = os.environ.get("LOG_DIR", "logs")
 
 WINDOW_SECONDS = float(os.environ.get("WINDOW_SECONDS", 10))      # fenêtre mesurée
 BASELINE_SECONDS = float(os.environ.get("BASELINE_SECONDS", 180))  # historique de référence
 SPIKE_MULTIPLIER = float(os.environ.get("SPIKE_MULTIPLIER", 3))    # x la moyenne
 MIN_MESSAGES = int(os.environ.get("MIN_MESSAGES", 8))              # plancher absolu
 COOLDOWN_SECONDS = float(os.environ.get("COOLDOWN_SECONDS", 60))   # entre deux clips
-
-HELIX = "https://api.twitch.tv/helix"
-
-
-# --- API Twitch ---------------------------------------------------------------
-def _headers():
-    return {"Authorization": f"Bearer {ACCESS_TOKEN}", "Client-Id": CLIENT_ID}
-
-
-def refresh_access_token() -> bool:
-    """Renouvelle le token si un refresh token est fourni."""
-    global ACCESS_TOKEN, REFRESH_TOKEN
-    if not (REFRESH_TOKEN and CLIENT_SECRET):
-        return False
-    r = requests.post(
-        "https://id.twitch.tv/oauth2/token",
-        data={
-            "grant_type": "refresh_token",
-            "refresh_token": REFRESH_TOKEN,
-            "client_id": CLIENT_ID,
-            "client_secret": CLIENT_SECRET,
-        },
-        timeout=10,
-    )
-    if r.status_code != 200:
-        print(f"[!] Échec du refresh du token : {r.status_code} {r.text}")
-        return False
-    data = r.json()
-    ACCESS_TOKEN = data["access_token"]
-    REFRESH_TOKEN = data.get("refresh_token", REFRESH_TOKEN)
-    _save_tokens()
-    print("[i] Token Twitch renouvelé.")
-    return True
-
-
-def _save_tokens() -> None:
-    """Sauvegarde les tokens renouvelés dans .env pour le prochain lancement."""
-    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
-    if not os.path.exists(path):
-        return
-    updates = {"TWITCH_ACCESS_TOKEN": ACCESS_TOKEN, "TWITCH_REFRESH_TOKEN": REFRESH_TOKEN}
-    with open(path, encoding="utf-8") as f:
-        lines = f.read().splitlines()
-    seen = set()
-    for i, line in enumerate(lines):
-        key = line.split("=", 1)[0].strip()
-        if key in updates:
-            lines[i] = f"{key}={updates[key]}"
-            seen.add(key)
-    for key, value in updates.items():
-        if key not in seen:
-            lines.append(f"{key}={value}")
-    with open(path, "w", encoding="utf-8") as f:
-        f.write("\n".join(lines) + "\n")
-
-
-def helix(method: str, path: str, **kwargs) -> requests.Response:
-    r = requests.request(method, f"{HELIX}{path}", headers=_headers(), timeout=10, **kwargs)
-    if r.status_code == 401 and refresh_access_token():
-        r = requests.request(method, f"{HELIX}{path}", headers=_headers(), timeout=10, **kwargs)
-    return r
-
-
-def get_broadcaster_id() -> str:
-    r = helix("GET", "/users", params={"login": CHANNEL})
-    r.raise_for_status()
-    return r.json()["data"][0]["id"]
-
-
-def create_clip(broadcaster_id: str) -> tuple[str, str] | None:
-    """Crée un clip et renvoie (url, lien_d_édition), ou None en cas d'échec."""
-    r = helix("POST", "/clips", params={"broadcaster_id": broadcaster_id})
-    if r.status_code != 202:
-        print(f"[!] Création du clip impossible : {r.status_code} {r.text}")
-        return None
-    created = r.json()["data"][0]
-    clip_id = created["id"]
-    edit_url = created.get("edit_url") or f"https://clips.twitch.tv/{clip_id}/edit"
-
-    # Le clip met quelques secondes à être disponible.
-    for _ in range(10):
-        time.sleep(2)
-        c = helix("GET", "/clips", params={"id": clip_id})
-        if c.status_code == 200 and c.json().get("data"):
-            return c.json()["data"][0]["url"], edit_url
-    return f"https://clips.twitch.tv/{clip_id}", edit_url
-
-
-def send_to_discord(url: str, edit_url: str, count: int, baseline: float) -> None:
-    # Le lien d'édition permet de recadrer (ex. en vertical) et de télécharger le clip.
-    # Il est envoyé dans le salon Discord PRIVÉ : ne le partage pas publiquement.
-    content = (
-        f"🎬 **Nouveau clip !** (pic de chat : {count} messages en "
-        f"{WINDOW_SECONDS:.0f}s, normal ≈ {baseline:.1f})\n"
-        f"▶️ Voir : {url}\n"
-        f"✂️ Éditer / télécharger : <{edit_url}>"
-    )
-    r = requests.post(DISCORD_WEBHOOK, json={"content": content}, timeout=10)
-    if r.status_code >= 300:
-        print(f"[!] Erreur Discord : {r.status_code} {r.text}")
 
 
 # --- Détection de pic ---------------------------------------------------------
@@ -159,14 +57,71 @@ class SpikeDetector:
         return None
 
 
+# --- Session de live (un fichier de log par live) ----------------------------
+class Session:
+    def __init__(self):
+        self.stream_id = None
+        self.log = None
+
+    def start(self, stream: dict) -> None:
+        started = datetime.fromisoformat(stream["started_at"].replace("Z", "+00:00")).timestamp()
+        path = os.path.join(LOG_DIR, f"{CHANNEL}_{stream['id']}.jsonl")
+        self.stream_id = stream["id"]
+        self.log = chatlog.ChatLog(path, stream["id"], started)
+        print(f"[i] Live détecté, enregistrement du chat → {path}")
+
+    def end(self) -> str:
+        path = self.log.path
+        self.log.close()
+        self.stream_id = self.log = None
+        return path
+
+    def record(self, event: dict) -> None:
+        if self.log:
+            self.log.add(event)
+
+
+async def watch_stream(session: Session, broadcaster_id: str):
+    """Surveille le live (en ligne / hors ligne) et lance l'analyse à la fin."""
+    offline_polls = 0
+    while True:
+        try:
+            stream = await asyncio.to_thread(get_stream, broadcaster_id)
+            if stream:
+                offline_polls = 0
+                if session.stream_id != stream["id"]:
+                    session.start(stream)
+            elif session.stream_id:
+                offline_polls += 1
+                if offline_polls >= 3:  # ~3 min hors ligne = live terminé
+                    path = session.end()
+                    print("[i] Live terminé.")
+                    if AUTO_ANALYZE:
+                        asyncio.create_task(asyncio.to_thread(_analyze_safe, path))
+        except Exception as e:
+            print(f"[!] Suivi du live : {e}")
+        await asyncio.sleep(60)
+
+
+def _analyze_safe(path: str) -> None:
+    try:
+        # Le VOD met un peu de temps à être prêt après la fin du live.
+        time.sleep(60)
+        analyze.run(path, analyze.highlights.TOP_N, dry_run=False)
+    except Exception as e:
+        print(f"[!] Analyse échouée ({e}). Relance : python analyze.py {path}")
+
+
 # --- Lecture du chat (IRC) ----------------------------------------------------
-async def run_chat(detector: SpikeDetector, on_spike):
+async def run_chat(detector: SpikeDetector, on_spike, session: Session):
     nick = f"justinfan{random.randint(10000, 99999)}"
     while True:
         try:
             ctx = ssl.create_default_context()
             reader, writer = await asyncio.open_connection("irc.chat.twitch.tv", 6697, ssl=ctx)
-            writer.write(f"NICK {nick}\r\nJOIN #{CHANNEL}\r\n".encode())
+            writer.write(
+                f"CAP REQ :twitch.tv/tags twitch.tv/commands\r\nNICK {nick}\r\nJOIN #{CHANNEL}\r\n".encode()
+            )
             await writer.drain()
             print(f"[i] Connecté au chat de #{CHANNEL}")
 
@@ -178,10 +133,14 @@ async def run_chat(detector: SpikeDetector, on_spike):
                 if text.startswith("PING"):
                     writer.write(b"PONG :tmi.twitch.tv\r\n")
                     await writer.drain()
-                elif " PRIVMSG " in text:
-                    now = time.time()
+                    continue
+                now = time.time()
+                event = chatlog.to_event(text, now)
+                if event:
+                    session.record(event)
+                if " PRIVMSG " in text:
                     detector.add_message(now)
-                    result = detector.check(now)
+                    result = detector.check(now) if LIVE_CLIPS else None
                     if result:
                         detector.last_clip = now
                         asyncio.create_task(on_spike(*result))
@@ -193,6 +152,16 @@ async def run_chat(detector: SpikeDetector, on_spike):
 async def main():
     broadcaster_id = await asyncio.to_thread(get_broadcaster_id)
     print(f"[i] Chaîne {CHANNEL} (id {broadcaster_id})")
+    print(f"[i] Clips en direct : {'oui' if LIVE_CLIPS else 'non'} · analyse de fin de live : {'oui' if AUTO_ANALYZE else 'non'}")
+
+    session = Session()
+    # Détecte un live déjà en cours AVANT de lire le chat, pour ne rien perdre.
+    try:
+        stream = await asyncio.to_thread(get_stream, broadcaster_id)
+        if stream:
+            session.start(stream)
+    except Exception as e:
+        print(f"[!] Impossible de lire l'état du live : {e}")
 
     async def on_spike(count: int, baseline: float):
         print(f"[+] Pic détecté : {count} messages (normal ≈ {baseline:.1f}) → clip…")
@@ -200,9 +169,12 @@ async def main():
         if result:
             url, edit_url = result
             print(f"[+] Clip : {url}")
-            await asyncio.to_thread(send_to_discord, url, edit_url, count, baseline)
+            await asyncio.to_thread(send_to_discord, url, edit_url, count, baseline, WINDOW_SECONDS)
 
-    await run_chat(SpikeDetector(), on_spike)
+    await asyncio.gather(
+        run_chat(SpikeDetector(), on_spike, session),
+        watch_stream(session, broadcaster_id),
+    )
 
 
 if __name__ == "__main__":

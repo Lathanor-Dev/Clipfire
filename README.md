@@ -67,6 +67,22 @@ The wizard opens your browser. Log in with the account that will create the clip
 3. If activity goes over the threshold (3× the average and at least 8 messages), it creates a clip.
 4. The link is sent to Discord. A cooldown prevents duplicate clips.
 
+## Full-stream analysis (highlights)
+
+On top of instant clips, Clipfire **records the whole chat** during the stream (`logs/`). When the stream ends (≈ 3 min offline) it analyses everything and automatically clips the **best moments** from the VOD, then posts a ranked summary to Discord.
+
+Signals combined (compared to *this stream's* normal): message rate, number of distinct chatters, "hype" messages (LUL, KEKW, lol, clip…), ALL-CAPS, subs / raids / bits.
+
+```bash
+python analyze.py logs/your_channel_123456.jsonl --dry-run   # preview moments, no clips created
+python analyze.py logs/your_channel_123456.jsonl --top 5     # clip the 5 best
+```
+
+- Enable **"Store past broadcasts"** (VODs) in Twitch.
+- `LIVE_CLIPS=0` turns off instant clips, `AUTO_ANALYZE=0` turns off automatic analysis. `HL_*` and `CLIP_*` settings are in `.env.example`.
+- Clips from a VOD use Twitch's "Create Clip From VOD" API (open beta).
+- With Docker, `logs/` is mounted so it survives restarts.
+
 ## Posting clips on social media
 
 Each Discord message contains two links:

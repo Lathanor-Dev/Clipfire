@@ -7,3 +7,5 @@ services:
       # Le .env (créé par setup.py) est monté dans le conteneur ;
       # les tokens renouvelés y sont sauvegardés automatiquement.
       - ./.env:/app/.env
+      # Logs du chat complet (nécessaires à l'analyse de fin de live)
+      - ./logs:/app/logs

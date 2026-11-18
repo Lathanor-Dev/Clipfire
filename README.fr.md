@@ -67,6 +67,22 @@ L'assistant ouvre ton navigateur. Connecte-toi avec le compte qui créera les cl
 3. Si l'activité dépasse le seuil (3× la moyenne et au moins 8 messages), il crée un clip.
 4. Le lien est envoyé dans Discord. Un cooldown évite les clips en double.
 
+## Analyse complète du live (moments forts)
+
+En plus des clips instantanés, Clipfire **enregistre tout le chat** pendant le live (`logs/`). Quand le live se termine (≈ 3 min hors ligne), il analyse l'ensemble et crée automatiquement les **meilleurs moments** depuis le VOD, puis poste un résumé classé dans Discord.
+
+Signaux combinés (comparés à la normale *de ce live*) : débit de messages, nombre de chatteurs différents, messages « hype » (LUL, KEKW, mdr, clip…), MAJUSCULES, subs / raids / bits.
+
+```bash
+python analyze.py logs/ta_chaine_123456.jsonl --dry-run   # voir les moments sans créer de clips
+python analyze.py logs/ta_chaine_123456.jsonl --top 5     # créer les 5 meilleurs
+```
+
+- Il faut activer **« Stocker les diffusions passées »** (VOD) dans Twitch.
+- `LIVE_CLIPS=0` désactive les clips instantanés, `AUTO_ANALYZE=0` l'analyse automatique. Réglages `HL_*` et `CLIP_*` dans `.env.example`.
+- La création de clip depuis un VOD utilise l'API Twitch « Create Clip From VOD » (en bêta).
+- Avec Docker, le dossier `logs/` est monté pour survivre aux redémarrages.
+
 ## Publier les clips sur les réseaux sociaux
 
 Chaque message Discord contient deux liens :
