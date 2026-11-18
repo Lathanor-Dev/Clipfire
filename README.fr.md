@@ -45,8 +45,13 @@ Laisse `bot.py` tourner pendant ton live. C'est tout. 🎉
 3. **Catégorie** : Chat Bot · **Type de client** : Confidentiel
 4. Copie le **Client ID** et génère un **Client Secret**.
 
-### 2. Un webhook Discord
-Dans ton salon : **Modifier le salon → Intégrations → Webhooks → Nouveau webhook → Copier l'URL du webhook**.
+### 2. Un salon Discord privé + un webhook
+Tous les clips sont envoyés automatiquement dans un seul salon Discord. Mets-le en **privé** : toi seul vois les clips et tu choisis ceux qui méritent d'être publiés sur les réseaux sociaux.
+
+1. Crée un nouveau salon et passe-le en **Salon privé** (Modifier le salon → Permissions → active *Salon privé*), puis ajoute uniquement toi (et les personnes de confiance, comme un monteur ou un modo).
+2. Dans ce salon : **Modifier le salon → Intégrations → Webhooks → Nouveau webhook → Copier l'URL du webhook**.
+
+> ⚠️ Toute personne qui a l'URL du webhook peut poster dans ton salon : garde-la secrète, comme tes tokens.
 
 ### 3. L'autorisation Twitch
 L'assistant ouvre ton navigateur. Connecte-toi avec le compte qui créera les clips (le tien ou un compte bot) et clique sur **Autoriser**. Les tokens sont récupérés et enregistrés automatiquement dans `.env`, et renouvelés tout seuls ensuite.

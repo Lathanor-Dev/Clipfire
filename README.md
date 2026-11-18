@@ -45,8 +45,13 @@ Keep `bot.py` running while you stream. That's it. 🎉
 3. **Category**: Chat Bot · **Client Type**: Confidential
 4. Copy the **Client ID** and generate a **Client Secret**.
 
-### 2. A Discord webhook
-In your channel: **Edit Channel → Integrations → Webhooks → New Webhook → Copy Webhook URL**.
+### 2. A private Discord channel + webhook
+All clips are posted automatically in one Discord channel, so make it **private**: that way only you see the clips and you decide which ones are worth posting on social media.
+
+1. Create a new channel and set it to **Private Channel** (Edit Channel → Permissions → turn on *Private Channel*), then add only yourself (and anyone you trust, like an editor or a mod).
+2. In that channel: **Edit Channel → Integrations → Webhooks → New Webhook → Copy Webhook URL**.
+
+> ⚠️ Anyone with the webhook URL can post in your channel, so keep it secret like your tokens.
 
 ### 3. Twitch authorization
 The wizard opens your browser. Log in with the account that will create the clips (yours or a bot account) and click **Authorize**. Tokens are fetched and saved to `.env` automatically, and refreshed on their own afterwards.
