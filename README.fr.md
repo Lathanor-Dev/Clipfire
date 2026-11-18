@@ -18,7 +18,7 @@ Quand le chat s'enflamme, Clipfire crée un clip et envoie le lien dans ton salo
 **Prérequis :** [Python 3.10+](https://www.python.org/downloads/) et un compte Twitch.
 
 ```bash
-git clone https://github.com/TON_PSEUDO/Clipfire.git
+git clone https://github.com/Lathanor-Dev/Clipfire.git
 cd Clipfire
 
 # (conseillé) environnement virtuel

@@ -18,7 +18,7 @@ When chat goes wild, Clipfire creates a clip and posts the link in your Discord 
 **Requirements:** [Python 3.10+](https://www.python.org/downloads/) and a Twitch account.
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/Clipfire.git
+git clone https://github.com/Lathanor-Dev/Clipfire.git
 cd Clipfire
 
 # (recommended) virtual environment
