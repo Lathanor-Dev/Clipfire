@@ -78,6 +78,13 @@ python analyze.py logs/ta_chaine_123456.jsonl --dry-run   # voir les moments san
 python analyze.py logs/ta_chaine_123456.jsonl --top 5     # créer les 5 meilleurs
 ```
 
+**Découper toi-même en MP4 (sans l'API de clips Twitch) :**
+```bash
+python analyze.py logs/xxx.jsonl --local                 # télécharge seulement les passages (yt-dlp) → clips/*.mp4
+python analyze.py logs/xxx.jsonl --video mon_vod.mp4     # coupe dans un VOD déjà téléchargé (ffmpeg)
+```
+Nécessite [ffmpeg](https://ffmpeg.org/download.html) installé (et `yt-dlp`, installé avec `pip install -r requirements.txt`). Pas besoin de télécharger tout le stream : seuls les ~30 s de chaque moment sont récupérés. Les MP4 sont dans `clips/`.
+
 - Il faut activer **« Stocker les diffusions passées »** (VOD) dans Twitch.
 - `LIVE_CLIPS=0` désactive les clips instantanés, `AUTO_ANALYZE=0` l'analyse automatique. Réglages `HL_*` et `CLIP_*` dans `.env.example`.
 - La création de clip depuis un VOD utilise l'API Twitch « Create Clip From VOD » (en bêta).

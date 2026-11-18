@@ -78,6 +78,13 @@ python analyze.py logs/your_channel_123456.jsonl --dry-run   # preview moments, 
 python analyze.py logs/your_channel_123456.jsonl --top 5     # clip the 5 best
 ```
 
+**Cut MP4s yourself (without Twitch's clip API):**
+```bash
+python analyze.py logs/xxx.jsonl --local                 # downloads only the needed parts (yt-dlp) → clips/*.mp4
+python analyze.py logs/xxx.jsonl --video my_vod.mp4      # cut from an already-downloaded VOD (ffmpeg)
+```
+Requires [ffmpeg](https://ffmpeg.org/download.html) (and `yt-dlp`, installed via `pip install -r requirements.txt`). No need to download the whole stream: only the ~30 s around each moment is fetched. MP4s land in `clips/`.
+
 - Enable **"Store past broadcasts"** (VODs) in Twitch.
 - `LIVE_CLIPS=0` turns off instant clips, `AUTO_ANALYZE=0` turns off automatic analysis. `HL_*` and `CLIP_*` settings are in `.env.example`.
 - Clips from a VOD use Twitch's "Create Clip From VOD" API (open beta).
