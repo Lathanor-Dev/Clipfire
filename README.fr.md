@@ -74,6 +74,30 @@ Chaque message Discord contient deux liens :
 
 Le lien d'édition donne accès à l'éditeur du clip, c'est pour ça que les clips doivent aller dans un salon **privé** (voir l'étape 2). Ne partage pas ce lien publiquement.
 
+## Le faire tourner en permanence
+
+Clipfire ne crée des clips que quand tu es en live, mais tu peux le laisser tourner en continu. Il se reconnecte tout seul au chat si la connexion saute et renouvelle lui-même ses tokens Twitch. Choisis ce qui te convient :
+
+**Ton PC** (le plus simple) : lance `python bot.py` avant ton live. Sous Windows, tu peux le démarrer automatiquement avec le Planificateur de tâches.
+
+**Un Raspberry Pi ou un petit VPS** (toujours allumé) :
+1. Lance d'abord `python setup.py` sur ton ordinateur (il faut un navigateur), puis copie le fichier `.env` généré sur le serveur.
+2. Ensuite, au choix :
+
+```bash
+# Option A : Docker
+docker compose up -d --build
+docker compose logs -f        # voir ce que fait le bot
+
+# Option B : systemd (Linux, sans Docker)
+# adapte d'abord User et les chemins dans clipfire.service
+sudo cp clipfire.service /etc/systemd/system/
+sudo systemctl enable --now clipfire
+journalctl -u clipfire -f
+```
+
+> Ne lance **qu'une seule copie** du bot à la fois, sinon tu auras des clips en double.
+
 ## Réglages
 
 Tout se règle dans le fichier `.env` :

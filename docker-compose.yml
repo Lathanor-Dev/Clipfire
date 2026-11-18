@@ -1,0 +1,9 @@
+services:
+  clipfire:
+    build: .
+    container_name: clipfire
+    restart: unless-stopped
+    volumes:
+      # Le .env (créé par setup.py) est monté dans le conteneur ;
+      # les tokens renouvelés y sont sauvegardés automatiquement.
+      - ./.env:/app/.env

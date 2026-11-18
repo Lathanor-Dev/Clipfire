@@ -74,6 +74,30 @@ Each Discord message contains two links:
 
 The edit link gives access to the clip editor, which is why clips should go to a **private** channel (see step 2). Don't share that link publicly.
 
+## Running it 24/7
+
+Clipfire only creates clips while you're live, but you can leave it running all the time. It reconnects to chat by itself if the connection drops and refreshes its Twitch tokens on its own. Pick what suits you:
+
+**Your own PC** (simplest): run `python bot.py` before going live. On Windows you can launch it at startup with the Task Scheduler.
+
+**A Raspberry Pi or a small VPS** (always on):
+1. Run `python setup.py` on your computer first (it needs a browser), then copy the generated `.env` file to the server.
+2. Then choose one of these:
+
+```bash
+# Option A: Docker
+docker compose up -d --build
+docker compose logs -f        # see what the bot is doing
+
+# Option B: systemd (Linux, without Docker)
+# edit User and paths in clipfire.service first
+sudo cp clipfire.service /etc/systemd/system/
+sudo systemctl enable --now clipfire
+journalctl -u clipfire -f
+```
+
+> Run **only one copy** of the bot at a time, otherwise you'll get duplicate clips.
+
 ## Settings
 
 Everything is configured in the `.env` file:
