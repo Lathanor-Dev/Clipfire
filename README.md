@@ -40,6 +40,8 @@ Keep `bot.py` running while you stream. That's it. 🎉
 ## What the wizard asks for (`setup.py`)
 
 ### 1. A Twitch app
+📖 **[Detailed step-by-step guide](docs/twitch-app-guide.md)** (quick version below)
+
 1. Go to [dev.twitch.tv/console/apps](https://dev.twitch.tv/console/apps) → **Register Your Application**.
 2. **OAuth Redirect URL**: `http://localhost:3000`
 3. **Category**: Chat Bot · **Client Type**: Confidential

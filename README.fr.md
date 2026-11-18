@@ -40,6 +40,8 @@ Laisse `bot.py` tourner pendant ton live. C'est tout. 🎉
 ## Ce que demande l'assistant (`setup.py`)
 
 ### 1. Une app Twitch
+📖 **[Guide détaillé pas à pas](docs/twitch-app-guide.fr.md)** (version rapide ci-dessous)
+
 1. Va sur [dev.twitch.tv/console/apps](https://dev.twitch.tv/console/apps) → **Enregistrer votre application**.
 2. **URL de redirection OAuth** : `http://localhost:3000`
 3. **Catégorie** : Chat Bot · **Type de client** : Confidentiel
