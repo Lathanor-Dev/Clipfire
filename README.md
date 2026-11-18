@@ -65,6 +65,15 @@ The wizard opens your browser. Log in with the account that will create the clip
 3. If activity goes over the threshold (3× the average and at least 8 messages), it creates a clip.
 4. The link is sent to Discord. A cooldown prevents duplicate clips.
 
+## Posting clips on social media
+
+Each Discord message contains two links:
+
+- ▶️ **Watch**: the normal clip link, to check if the moment is good.
+- ✂️ **Edit / download**: the Twitch clip editor, where you can crop the clip to **vertical (9:16)** for TikTok, Reels or Shorts and download it.
+
+The edit link gives access to the clip editor, which is why clips should go to a **private** channel (see step 2). Don't share that link publicly.
+
 ## Settings
 
 Everything is configured in the `.env` file:

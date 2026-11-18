@@ -100,27 +100,33 @@ def get_broadcaster_id() -> str:
     return r.json()["data"][0]["id"]
 
 
-def create_clip(broadcaster_id: str) -> str | None:
-    """Crée un clip et renvoie son URL (ou None en cas d'échec)."""
+def create_clip(broadcaster_id: str) -> tuple[str, str] | None:
+    """Crée un clip et renvoie (url, lien_d_édition), ou None en cas d'échec."""
     r = helix("POST", "/clips", params={"broadcaster_id": broadcaster_id})
     if r.status_code != 202:
         print(f"[!] Création du clip impossible : {r.status_code} {r.text}")
         return None
-    clip_id = r.json()["data"][0]["id"]
+    created = r.json()["data"][0]
+    clip_id = created["id"]
+    edit_url = created.get("edit_url") or f"https://clips.twitch.tv/{clip_id}/edit"
 
     # Le clip met quelques secondes à être disponible.
     for _ in range(10):
         time.sleep(2)
         c = helix("GET", "/clips", params={"id": clip_id})
         if c.status_code == 200 and c.json().get("data"):
-            return c.json()["data"][0]["url"]
-    return f"https://clips.twitch.tv/{clip_id}"
+            return c.json()["data"][0]["url"], edit_url
+    return f"https://clips.twitch.tv/{clip_id}", edit_url
 
 
-def send_to_discord(url: str, count: int, baseline: float) -> None:
+def send_to_discord(url: str, edit_url: str, count: int, baseline: float) -> None:
+    # Le lien d'édition permet de recadrer (ex. en vertical) et de télécharger le clip.
+    # Il est envoyé dans le salon Discord PRIVÉ : ne le partage pas publiquement.
     content = (
         f"🎬 **Nouveau clip !** (pic de chat : {count} messages en "
-        f"{WINDOW_SECONDS:.0f}s, normal ≈ {baseline:.1f})\n{url}"
+        f"{WINDOW_SECONDS:.0f}s, normal ≈ {baseline:.1f})\n"
+        f"▶️ Voir : {url}\n"
+        f"✂️ Éditer / télécharger : <{edit_url}>"
     )
     r = requests.post(DISCORD_WEBHOOK, json={"content": content}, timeout=10)
     if r.status_code >= 300:
@@ -190,10 +196,11 @@ async def main():
 
     async def on_spike(count: int, baseline: float):
         print(f"[+] Pic détecté : {count} messages (normal ≈ {baseline:.1f}) → clip…")
-        url = await asyncio.to_thread(create_clip, broadcaster_id)
-        if url:
+        result = await asyncio.to_thread(create_clip, broadcaster_id)
+        if result:
+            url, edit_url = result
             print(f"[+] Clip : {url}")
-            await asyncio.to_thread(send_to_discord, url, count, baseline)
+            await asyncio.to_thread(send_to_discord, url, edit_url, count, baseline)
 
     await run_chat(SpikeDetector(), on_spike)
 

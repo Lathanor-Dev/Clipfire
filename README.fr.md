@@ -65,6 +65,15 @@ L'assistant ouvre ton navigateur. Connecte-toi avec le compte qui créera les cl
 3. Si l'activité dépasse le seuil (3× la moyenne et au moins 8 messages), il crée un clip.
 4. Le lien est envoyé dans Discord. Un cooldown évite les clips en double.
 
+## Publier les clips sur les réseaux sociaux
+
+Chaque message Discord contient deux liens :
+
+- ▶️ **Voir** : le lien normal du clip, pour vérifier si le moment est bon.
+- ✂️ **Éditer / télécharger** : l'éditeur de clips Twitch, où tu peux recadrer le clip en **vertical (9:16)** pour TikTok, Reels ou Shorts et le télécharger.
+
+Le lien d'édition donne accès à l'éditeur du clip, c'est pour ça que les clips doivent aller dans un salon **privé** (voir l'étape 2). Ne partage pas ce lien publiquement.
+
 ## Réglages
 
 Tout se règle dans le fichier `.env` :
